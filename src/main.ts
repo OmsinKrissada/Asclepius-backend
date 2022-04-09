@@ -1,83 +1,120 @@
 import 'dotenv/config';
-import express, { RequestHandler } from 'express';
-import { Server, Socket } from 'socket.io';
-import axios from 'axios';
-import cors from 'cors';
+import { Server } from 'socket.io';
+import { expandDims } from "@tensorflow/tfjs";
+import { NormalizedLandmarkList, NormalizedLandmarkListList } from '@mediapipe/hands';
 
-import * as tf from "@tensorflow/tfjs";
-import { nextFrame } from "@tensorflow/tfjs";
+import { loadModel, predictLetter, predictWord } from './predict';
 
 
-const app = express();
-const io = new Server(3001);
-
-// CORS
-app.use((req, res, next) => {
-	const origin = req.get('origin');
-	const allowedOrigins = ['https://asclepius.krissada.com', 'http://localhost:3000'];
-	if (allowedOrigins.includes(origin)) {
-		cors({ origin: origin })(req, res, next);
-	} else {
-		cors({ origin: '*' })(req, res, next);
-	}
+const ws_port = +process.env.WS_PORT || 3001;
+let io = new Server({
+	cors: {
+		origin: "*"
+	},
 });
 
-// Check Content-Type
-app.use((req, res, next) => {
-	if (req.method.toUpperCase() == 'POST' && !req.is('application/json')) {
-		res.status(415).send('only accepts application/json in POST method');
-	} else {
-		express.json()(req, res, next);
-	}
-	return;
-});
+interface holisResult {
+	pose: NormalizedLandmarkList;
+	face: NormalizedLandmarkList;
+	left: NormalizedLandmarkList;
+	right: NormalizedLandmarkList;
+}
 
-app.use((err, req, res, next) => {
-	if (err) {
-		res.status(400).send('received malformed JSON');
-	}
-});
+const sessionConfident = new Map<string, string[]>();
+const lastPrediction = new Map<string, string>();
+const frameCoordinates = new Map<string, number[][]>(); // store last 30 frame results from Holistic model
 
-// let net: tf.GraphModel;
-
-// tf.loadGraphModel(
-// 	"https://github.com/Retaehc-pop/TF_SignLanguage_handvariation/raw/master/tfjs/group1-shard1of1.bin"
-// ).then(model => net = model);
-
-// tf.loadLayersModel('https://github.com/Retaehc-pop/TF_SignLanguage_handvariation/raw/master/tfjs/model.json');
-// net.pre;
-// const example = tf.frompixel(webcamElement);  // for example
-// const prediction = model.predict(example);
-
-// app.post('/detect', (req, res) => {
-// 	const { image } = req.body;
-// 	const tensor = tf.browser.fromPixels(image);
-// 	const resized = tf.image.resizeBilinear(tensor, [224, 224]).toFloat();
-// 	const offset = tf.scalar(127.5);
-// 	const normalized = resized.sub(offset).div(offset);
-// 	const batched = normalized.expandDims(0);
-// 	const result = net.predict(batched);
-// 	const prediction = result.dataSync();
-// 	const predictionArray = Array.from(prediction);
-// 	const maxIndex = predictionArray.indexOf(Math.max(...predictionArray));
-// 	const maxValue = predictionArray[maxIndex];
-// 	const maxLabel = maxIndex.toString();
-// 	const maxProbability = maxValue.toFixed(4);
-// 	const response = {
-// 		label: maxLabel,
-// 		probability: maxProbability
-// 	};
-// 	res.send(response);
-// });
-
-
-app.listen(process.env.PORT || 3000, () => {
-	console.log(`Listening on port ${process.env.PORT || 3000}`);
-});
-
-io.on('connection', socket => {
-	socket.emit('hello', 'world');
-	socket.on('hand', arg => {
-		console.log(arg);
+io.on('connection', async socket => {
+	console.log(`${new Date().toLocaleTimeString('th', { hour12: false })} [CONNECTED] ${socket.id} (${(await io.allSockets()).size} connected) IP: ${socket.handshake.address}`);
+	sessionConfident.set(socket.id, []);
+	frameCoordinates.set(socket.id, []);
+	socket.on('disconnect', async reason => {
+		console.log(`${new Date().toLocaleTimeString('th', { hour12: false })} [DISCONNECTED] ${socket.id} (${(await io.allSockets()).size} connected) Reason: ${reason}`);
+		sessionConfident.delete(socket.id);
+		lastPrediction.delete(socket.id);
+		frameCoordinates.delete(socket.id);
 	});
+
+	// socket.on('frame', (frame: HTMLVideoElement) => {
+	// 	console.log(frame.width);
+	// });
+
+	socket.on('holis', (result: holisResult) => {
+		// console.log('received');
+		// Format data
+		const combined = [];
+		// console.log(result.pose.length, result.face.length, result.left.length, result.right.length);
+		for (const landmark of result.pose) {
+			combined.push(landmark.x);
+			combined.push(landmark.y);
+			combined.push(landmark.z);
+			combined.push(landmark.visibility);
+		}
+		for (const landmark of result.face) {
+			combined.push(landmark.x);
+			combined.push(landmark.y);
+			combined.push(landmark.z);
+		}
+		for (const landmark of result.left) {
+			combined.push(landmark.x);
+			combined.push(landmark.y);
+			combined.push(landmark.z);
+		}
+		for (const landmark of result.right) {
+			combined.push(landmark.x);
+			combined.push(landmark.y);
+			combined.push(landmark.z);
+		}
+
+		// Predict
+		let frames = frameCoordinates.get(socket.id);
+		frames.push(combined);
+		frames = frames.slice(-30);
+		frameCoordinates.set(socket.id, frames);
+		if (frames.length < 30) return;
+
+		const prediction = predictWord(expandDims(frames));
+		console.log(prediction);
+		if (!prediction) return;
+		const { word, confidence } = prediction;
+
+		socket.emit('guess', { word, confidence });
+
+	});
+
+
+	socket.on('mh', (landmarks_list: NormalizedLandmarkListList) => {
+		// Format data
+		const all_hand_pos = [];
+		for (const landmarks of landmarks_list) {
+			for (const joint of landmarks) {
+				all_hand_pos.push(joint.x);
+				all_hand_pos.push(joint.y);
+				all_hand_pos.push(joint.z);
+			}
+		}
+
+		// Predict
+		const prediction = predictLetter(expandDims(all_hand_pos));
+		if (!prediction) return;
+		const { letter, confidence } = prediction;
+
+		socket.emit('guess', { letter, confidence });
+
+		const predictions = sessionConfident.get(socket.id);
+		predictions.push(letter);
+		sessionConfident.set(socket.id, predictions.slice(-5));
+
+		if (predictions.length > 5 && predictions.every(p => p === predictions[0])) {
+			if (letter != lastPrediction.get(socket.id)) {
+				socket.emit('char', letter);
+			}
+			lastPrediction.set(socket.id, letter);
+		}
+	});
+});
+
+loadModel().then(() => {
+	io.listen(ws_port);
+	console.log('Listening for socket.io on port ' + ws_port);
 });
