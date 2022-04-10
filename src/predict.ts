@@ -40,7 +40,6 @@ export function predictLetter(input: Tensor<Rank> | Tensor<Rank>[]) {
 	let prediction: Float32Array;
 	try {
 		prediction = (<Tensor<Rank>>handModel.predict(input)).dataSync() as Float32Array;
-		console.log(prediction);
 		const max = prediction.reduce((max, cur) => max = cur > max ? cur : max, 0);
 		// console.log(max);
 		if (max < threshold) return;

@@ -100,20 +100,7 @@ io.on('connection', async socket => {
 		// Predict
 		const prediction = predictLetter(expandDims(all_hand_pos));
 		if (!prediction) return;
-		const { letter, confidence } = prediction;
-
-		socket.emit('char', { letter, confidence });
-
-		const predictions = sessionConfident.get(socket.id);
-		predictions.push(letter);
-		sessionConfident.set(socket.id, predictions.slice(-5));
-
-		if (predictions.length > 5 && predictions.every(p => p === predictions[0])) {
-			if (letter != lastPrediction.get(socket.id)) {
-				socket.emit('char', letter);
-			}
-			lastPrediction.set(socket.id, letter);
-		}
+		socket.emit('letter', prediction);
 	});
 });
 
