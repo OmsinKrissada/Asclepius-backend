@@ -1,4 +1,5 @@
 import 'dotenv/config';
+import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { expandDims } from "@tensorflow/tfjs";
 import { NormalizedLandmarkList, NormalizedLandmarkListList } from '@mediapipe/hands';
@@ -7,7 +8,8 @@ import { loadModel, predictLetter, predictWord } from './predict';
 
 
 const ws_port = +process.env.WS_PORT || 3001;
-let io = new Server({
+const wsHttpServer = createServer();
+const io = new Server(wsHttpServer, {
 	cors: {
 		origin: "*"
 	},
@@ -116,6 +118,5 @@ io.on('connection', async socket => {
 });
 
 loadModel().then(() => {
-	io.listen(ws_port);
-	console.log('Listening for socket.io on port ' + ws_port);
+	wsHttpServer.listen(ws_port, () => console.log('Listening for socket.io on port ' + ws_port));
 });
