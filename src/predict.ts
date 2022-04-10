@@ -17,9 +17,9 @@ const threshold = 0.95;
 //   return np.concatenate(all_hand_pos) # return 63 point of connection
 
 export async function loadModel() {
-	holisModel = await loadLayersModel('https://raw.githubusercontent.com/Retaehc-pop/TF_SignLanguage/master/tfjs/model.json');
+	holisModel = await loadLayersModel('https://raw.githubusercontent.com/Retaehc-pop/TF_SignLanguage/master/hand/model.json');
 	handModel = await loadLayersModel('https://raw.githubusercontent.com/Retaehc-pop/TF_SignLanguage_handvariation/master/tfjs/model.json');
-	wordList = (await axios.get('https://raw.githubusercontent.com/Retaehc-pop/TF_SignLanguage/master/word_list.txt')).data.split('\n');
+	wordList = (await axios.get('https://raw.githubusercontent.com/Retaehc-pop/TF_SignLanguage/master/label_map.txt')).data.split('\n').map(word => word.split(':')[0]);
 	if (!holisModel) throw 'Holistic model not loaded';
 	if (!handModel) throw 'Hand model not loaded';
 }
@@ -28,7 +28,6 @@ export function predictWord(input: Tensor<Rank> | Tensor<Rank>[]) {
 	let prediction: Float32Array;
 	try {
 		prediction = (<Tensor<Rank>>holisModel.predict(input)).dataSync() as Float32Array;
-		console.log(prediction);
 		const max = prediction.reduce((max, cur) => max = cur > max ? cur : max, 0);
 		if (max < threshold) return;
 		return { word: wordList[prediction.indexOf(max)], confidence: max };

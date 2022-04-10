@@ -11,6 +11,7 @@ let io = new Server({
 	cors: {
 		origin: "*"
 	},
+	path: '/'
 });
 
 interface holisResult {
@@ -78,7 +79,7 @@ io.on('connection', async socket => {
 		if (!prediction) return;
 		const { word, confidence } = prediction;
 
-		socket.emit('guess', { word, confidence });
+		socket.emit('word', { word, confidence });
 
 	});
 
@@ -99,7 +100,7 @@ io.on('connection', async socket => {
 		if (!prediction) return;
 		const { letter, confidence } = prediction;
 
-		socket.emit('guess', { letter, confidence });
+		socket.emit('char', { letter, confidence });
 
 		const predictions = sessionConfident.get(socket.id);
 		predictions.push(letter);
