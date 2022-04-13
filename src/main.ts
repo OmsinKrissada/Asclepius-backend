@@ -1,4 +1,4 @@
-import 'dotenv/config';
+require('dotenv').config();
 import { createServer } from 'http';
 import { Server } from 'socket.io';
 import { expandDims } from "@tensorflow/tfjs";
@@ -8,13 +8,12 @@ import { loadModel, predictLetter, predictWord } from './predict';
 
 console.log('Starting ...');
 
-const ws_port = process.env.PORT || +process.env.WS_PORT || 3001;
+const ws_port = process.env.PORT || 3001;
 const wsHttpServer = createServer();
 const io = new Server(wsHttpServer, {
 	cors: {
 		origin: "*"
-	},
-	path: '/'
+	}, path: '/'
 });
 
 interface holisResult {
