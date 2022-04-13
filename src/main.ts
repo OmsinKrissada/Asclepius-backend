@@ -6,8 +6,9 @@ import { NormalizedLandmarkList, NormalizedLandmarkListList } from '@mediapipe/h
 
 import { loadModel, predictLetter, predictWord } from './predict';
 
+console.log('Starting ...');
 
-const ws_port = +process.env.WS_PORT || 3001;
+const ws_port = process.env.PORT || +process.env.WS_PORT || 3001;
 const wsHttpServer = createServer();
 const io = new Server(wsHttpServer, {
 	cors: {
