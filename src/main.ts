@@ -52,27 +52,31 @@ loadModel().then(() => {
 			// Format data
 			const combined = [];
 			// console.log(result.pose.length, result.face.length, result.left.length, result.right.length);
-			for (const landmark of result.pose) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-				combined.push(landmark.visibility);
-			}
-			for (const landmark of result.face) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-			}
-			for (const landmark of result.left) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-			}
-			for (const landmark of result.right) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-			}
+			if (result.pose)
+				for (const landmark of result.pose) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+					combined.push(landmark.visibility);
+				} else for (let i = 0; i < 33 * 4; i++) combined.push(0);
+			if (result.face)
+				for (const landmark of result.face) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+				} else for (let i = 0; i < 468 * 3; i++) combined.push(0);
+			if (result.left)
+				for (const landmark of result.left) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+				} else for (let i = 0; i < 21 * 3; i++) combined.push(0);
+			if (result.right)
+				for (const landmark of result.right) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+				} else for (let i = 0; i < 21 * 3; i++) combined.push(0);
 
 			// Predict
 			let frames = wordFrames.get(socket.id);
@@ -94,27 +98,31 @@ loadModel().then(() => {
 			// Format data
 			const combined = [];
 			// console.log(result.pose.length, result.face.length, result.left.length, result.right.length);
-			for (const landmark of result.pose) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-				combined.push(landmark.visibility);
-			}
-			for (const landmark of result.face) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-			}
-			for (const landmark of result.left) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-			}
-			for (const landmark of result.right) {
-				combined.push(landmark.x);
-				combined.push(landmark.y);
-				combined.push(landmark.z);
-			}
+			if (result.pose)
+				for (const landmark of result.pose) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+					combined.push(landmark.visibility);
+				} else for (let i = 0; i < 33 * 4; i++) combined.push(0);
+			if (result.face)
+				for (const landmark of result.face) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+				} else for (let i = 0; i < 468 * 3; i++) combined.push(0);
+			if (result.left)
+				for (const landmark of result.left) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+				} else for (let i = 0; i < 21 * 3; i++) combined.push(0);
+			if (result.right)
+				for (const landmark of result.right) {
+					combined.push(landmark.x);
+					combined.push(landmark.y);
+					combined.push(landmark.z);
+				} else for (let i = 0; i < 21 * 3; i++) combined.push(0);
 
 			// Predict
 			let frames = illFrames.get(socket.id);

@@ -36,8 +36,9 @@ export function predictWord(input: Tensor<Rank> | Tensor<Rank>[]) {
 	let prediction: Float32Array;
 	try {
 		prediction = (<Tensor<Rank>>holisModel.predict(input)).dataSync() as Float32Array;
+		console.log(prediction);
 		const max = prediction.reduce((max, cur) => max = cur > max ? cur : max, 0);
-		if (max < threshold) return;
+		if (max < 0.6) return;
 		return { word: wordList[prediction.indexOf(max)], confidence: max };
 	} catch (err) {
 		console.warn(`Warning: ${err}`);
@@ -51,7 +52,7 @@ export function predictIllness(input: Tensor<Rank> | Tensor<Rank>[]) {
 		prediction = (<Tensor<Rank>>illnessModel.predict(input)).dataSync() as Float32Array;
 		console.log(prediction);
 		const max = prediction.reduce((max, cur) => max = cur > max ? cur : max, 0);
-		if (max < threshold) return;
+		if (max < 0) return;
 		return { word: illnessList[prediction.indexOf(max)], confidence: max };
 	} catch (err) {
 		console.log('gonna warn');
