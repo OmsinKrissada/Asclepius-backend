@@ -5,6 +5,7 @@ import { expandDims } from "@tensorflow/tfjs";
 import { NormalizedLandmarkList, NormalizedLandmarkListList } from '@mediapipe/hands';
 
 import { loadModel, predictIllness, predictLetter, predictNumber, predictWord } from './predict';
+import axios from 'axios';
 
 console.log('Loading models ...');
 loadModel().then(() => {
@@ -32,11 +33,27 @@ loadModel().then(() => {
 
 	io.on('connection', async socket => {
 		console.log(`${new Date().toLocaleTimeString('th', { hour12: false })} [CONNECTED] ${socket.id} (${(await io.allSockets()).size} connected) IP: ${socket.handshake.address}`);
+		axios.post('https://stats.krissada.com/asclepius', {
+			type: 'connect',
+			id: socket.id,
+			ip: socket.handshake.address
+
+		}).catch(err => {
+			console.warn(`Cannot submit stat data: ${err}`);
+		});
 		sessionConfident.set(socket.id, []);
 		wordFrames.set(socket.id, []);
 		illFrames.set(socket.id, []);
 		socket.on('disconnect', async reason => {
 			console.log(`${new Date().toLocaleTimeString('th', { hour12: false })} [DISCONNECTED] ${socket.id} (${(await io.allSockets()).size} connected) Reason: ${reason}`);
+			axios.post('https://stats.krissada.com/asclepius', {
+				type: 'disconnect',
+				id: socket.id,
+				ip: socket.handshake.address
+
+			}).catch(err => {
+				console.warn(`Cannot submit stat data: ${err}`);
+			});
 			sessionConfident.delete(socket.id);
 			lastPrediction.delete(socket.id);
 			wordFrames.delete(socket.id);
