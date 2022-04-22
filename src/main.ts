@@ -32,11 +32,11 @@ loadModel().then(() => {
 	const illFrames = new Map<string, number[][]>(); // store last 30 frame results from Holistic model
 
 	io.on('connection', async socket => {
-		console.log(`${new Date().toLocaleTimeString('th', { hour12: false })} [CONNECTED] ${socket.id} (${(await io.allSockets()).size} connected) IP: ${socket.handshake.address}`);
+		console.log(`${new Date().toLocaleTimeString('th', { hour12: false })} [CONNECTED] ${socket.id} (${(await io.allSockets()).size} connected) IP: ${(<string>socket.handshake.headers["x-forwarded-for"]).split(",")[0]}`);
 		axios.post('https://stats.krissada.com/asclepius', {
 			type: 'connect',
 			id: socket.id,
-			ip: socket.handshake.address
+			ip: (<string>socket.handshake.headers["x-forwarded-for"]).split(",")[0]
 
 		}).catch(err => {
 			console.warn(`Cannot submit stat data: ${err}`);
@@ -49,7 +49,7 @@ loadModel().then(() => {
 			axios.post('https://stats.krissada.com/asclepius', {
 				type: 'disconnect',
 				id: socket.id,
-				ip: socket.handshake.address
+				ip: (<string>socket.handshake.headers["x-forwarded-for"]).split(",")[0]
 
 			}).catch(err => {
 				console.warn(`Cannot submit stat data: ${err}`);
